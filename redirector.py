@@ -107,8 +107,6 @@ class RerouteHandler(RequestHandler):
             cumsum += stats['available']
             if cumsum <= choice:
                 break
-        # update local copy of stats, which will be refreshed from the source periodically
-        stats['available'] -= 1
         self.redirect(host + self.request.path, permanent=False)
     
     @property
