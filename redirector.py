@@ -48,7 +48,7 @@ def update_stats(stats):
         try:
             reply = yield f
             data = json.loads(reply.body.decode('utf8'))
-        except HTTPError as e:
+        except Exception as e:
             app_log.error("Failed to get stats for %s: %s", host, e)
             if host in stats:
                 stats[host] = {'available': 0, 'capacity': 0, 'down': True}
