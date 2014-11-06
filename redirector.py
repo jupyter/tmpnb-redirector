@@ -82,10 +82,11 @@ class HostsAPIHandler(RequestHandler):
 
 class StatsHandler(RequestHandler):
     def get(self):
-        '''Returns some statistics/metadata about the tmpnb servers'''
+        """Returns some statistics/metadata about the tmpnb servers"""
         response = {
                 'available': sum(s['available'] for s in self.stats.values()),
                 'capacity': sum(s['capacity'] for s in self.stats.values()),
+                'hosts': self.stats,
                 'version': '0.0.1',
         }
         self.write(response)
