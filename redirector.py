@@ -106,7 +106,7 @@ class RerouteHandler(RequestHandler):
         cumsum = 0
         for host, stats in self.stats.items():
             cumsum += stats['available']
-            if cumsum <= choice:
+            if cumsum >= choice:
                 break
         self.redirect(host + self.request.path, permanent=False)
     
