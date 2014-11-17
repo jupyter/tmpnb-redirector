@@ -66,7 +66,7 @@ class HostsAPIHandler(RequestHandler):
         try:
             host = json.loads(self.request.body.decode('utf8', 'replace'))['host']
             scheme = urlparse(host).scheme
-            if(scheme is 'http' or scheme is 'https'):
+            if(scheme == 'http' or scheme == 'https'):
                 return host
 
             raise Exception("Invalid host, must include http or https")
