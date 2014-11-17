@@ -17,6 +17,8 @@ Remove them with DELETE
 import json
 import random
 
+from urlparse import urlparse
+
 import tornado
 import tornado.options
 from tornado.log import app_log
@@ -62,7 +64,13 @@ class HostsAPIHandler(RequestHandler):
     ""
     def _get_host(self):
         try:
-            return json.loads(self.request.body.decode('utf8', 'replace'))['host']
+            host = json.loads(self.request.body.decode('utf8', 'replace'))['host']
+            scheme = urlparse(host).scheme
+            if(scheme is 'http' or scheme is 'https'):
+                return host
+
+            raise Exception("Invalid host, must include http or https")
+
         except Exception as e:
             app_log.error("Bad host %s", e)
             raise web.HTTPError(400)
