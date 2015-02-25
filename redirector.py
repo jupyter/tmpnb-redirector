@@ -18,6 +18,11 @@ import json
 import random
 
 from urlparse import urlparse
+try:
+    # py3
+    from http.client import responses
+except ImportError:
+    from httplib import responses
 
 import tornado
 import tornado.options
@@ -61,7 +66,7 @@ def update_stats(stats):
 
 
 class HostsAPIHandler(RequestHandler):
-    ""
+    """API handler for adding or removing redirect targets"""
     def _get_host(self):
         try:
             host = json.loads(self.request.body.decode('utf8', 'replace'))['host']
@@ -106,6 +111,30 @@ class StatsHandler(RequestHandler):
 class RerouteHandler(RequestHandler):
     """Redirect based on load"""
     
+    def write_error(self, status_code, **kwargs):
+        exc_info = kwargs.get('exc_info')
+        message = ''
+        status_message = responses.get(status_code, 'Unknown HTTP Error')
+        if exc_info:
+            exception = exc_info[1]
+            # get the custom message, if defined
+            try:
+                message = exception.log_message % exception.args
+            except Exception:
+                pass
+
+            # construct the custom reason, if defined
+            reason = getattr(exception, 'reason', '')
+            if reason:
+                status_message = reason
+
+        self.set_header('Content-Type', 'text/html')
+        self.render("error.html",
+            status_code=status_code,
+            status_message=status_message,
+            message=message,
+        )
+
     def get(self):
         up = {host:stats for host,stats in self.stats.items() if not stats.get('down')}
         if not up:
