@@ -107,13 +107,24 @@ class RerouteHandler(RequestHandler):
     """Redirect based on load"""
     
     def get(self):
-        if not self.stats:
-            raise web.HTTPError(502, "No servers to reroute to")
-        total_available = max(sum(s['available'] for s in self.stats.values()), 1)
-        choice = random.randint(0, total_available)
+        up = {host:stats for host,stats in self.stats.items() if not stats.get('down')}
+        if not up:
+            if self.stats:
+                msg = "All redirect targets are down"
+            else:
+                msg = "No redirect targets"
+            raise web.HTTPError(503, msg)
+
+        key = 'available'
+        total = sum(s[key] for s in up.values())
+        if not total:
+            # everybody's full, redirect based on capacity only
+            key = 'capacity'
+            total = sum(s[key] for s in up.values())
+        choice = random.randint(0, total)
         cumsum = 0
-        for host, stats in self.stats.items():
-            cumsum += stats['available']
+        for host, stats in up.items():
+            cumsum += stats[key]
             if cumsum >= choice:
                 break
         self.redirect(host + self.request.path, permanent=False)
