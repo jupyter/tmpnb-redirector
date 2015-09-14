@@ -17,7 +17,11 @@ Remove them with DELETE
 import json
 import random
 
-from urlparse import urlparse
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
+
 try:
     # py3
     from http.client import responses
