@@ -166,6 +166,14 @@ class RerouteHandler(RequestHandler):
     def stats(self):
         return self.settings['stats']
 
+class APISpawnHandler(RequestHandler):
+    def post(self):
+        pass
+
+    @property
+    def stats(self):
+        return self.settings['stats']
+
 def main():
     tornado.options.define('stats_period', default=60,
         help="Interval (s) for checking capacity of servers."
@@ -185,6 +193,7 @@ def main():
 
     handlers = [
         (r"/stats", StatsHandler),
+        (r"/api/spawn", APISpawnHandler),
         (r'/.*', RerouteHandler),
     ]
     
