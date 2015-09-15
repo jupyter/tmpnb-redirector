@@ -40,6 +40,31 @@ from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
+def select_host(server_stats):
+    """Select a random available host."""
+    up = {host: stats for host, stats in server_stats.items() if not server_stats.get("down")}
+    if not up:
+        if not server_stats:
+            msg = "All redirect targets are down"
+        else:
+            msg = "No redirect targets are available"
+        raise web.HTTPError(503, msg)
+
+    # Get the number of available targets
+    total = sum(stat['available'] for stat in up.values())
+    if not total:
+        # If there are no avaialble targets, redirect based on capacity
+        total = sum(stat['capacity'] for stat in up.values())
+
+    choice = random.randint(0, total)
+    cumsum = 0
+    for host, stats in up.items():
+        cumsum += stats['available']
+        if cumsum  >= choice:
+            break
+
+    return host
+
 @gen.coroutine
 def update_stats(stats):
     """Get updated stats for each host
@@ -140,26 +165,7 @@ class RerouteHandler(RequestHandler):
         )
 
     def get(self):
-        up = {host:stats for host,stats in self.stats.items() if not stats.get('down')}
-        if not up:
-            if self.stats:
-                msg = "All redirect targets are down"
-            else:
-                msg = "No redirect targets"
-            raise web.HTTPError(503, msg)
-
-        key = 'available'
-        total = sum(s[key] for s in up.values())
-        if not total:
-            # everybody's full, redirect based on capacity only
-            key = 'capacity'
-            total = sum(s[key] for s in up.values())
-        choice = random.randint(0, total)
-        cumsum = 0
-        for host, stats in up.items():
-            cumsum += stats[key]
-            if cumsum >= choice:
-                break
+        host = select_host(self.stats)
         self.redirect(host + self.request.path, permanent=False)
     
     @property
