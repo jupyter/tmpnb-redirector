@@ -18,7 +18,7 @@ import json
 import random
 
 try:
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, urljoin
 except ImportError:
     from urlparse import urlparse
 
@@ -36,7 +36,7 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 from tornado import ioloop
 
-from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient
+from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient, HTTPClient
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
@@ -68,6 +68,11 @@ def update_stats(stats):
             if host in stats:
                 stats[host] = data
 
+def fetch_api_spawn(host):
+    http_client = HTTPClient()
+    req = HTTPRequest(host + "/api/spawn/", method="POST", body="")
+    response = http_client.fetch(req)
+    return json.loads(response.body.decode('utf-8'))
 
 class HostsAPIHandler(RequestHandler):
     """API handler for adding or removing redirect targets"""
@@ -168,7 +173,11 @@ class RerouteHandler(RequestHandler):
 
 class APISpawnHandler(RequestHandler):
     def post(self):
-        pass
+        random_host = select_host(self.stats)
+        data = fetch_api_spawn(random_host)
+        data["url"] = urljoin(random_host, data["url"])
+        self.write(data)
+        
 
     @property
     def stats(self):
@@ -207,7 +216,7 @@ def main():
 
     settings = dict(
         stats=stats,
-        xsrf_cookies=True,
+        xsrf_cookies=False,
         debug=True,
         autoescape=None,
     )
