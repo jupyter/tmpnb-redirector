@@ -176,10 +176,11 @@ class APISpawnHandler(RequestHandler):
     def post(self):
         random_host = select_host(self.stats)
         http_client = AsyncHTTPClient()
-        request = HTTPRequest(random_host + "/api/spawn", method="POST", body="")
+        request = HTTPRequest(random_host + "/api/spawn/", method="POST", body="")
         response = yield http_client.fetch(request)
-        response["url"] = urljoin(random_host, response["url"])
-        self.write(response)
+        data = json.loads(response.body.decode("utf-8"))
+        data["url"] = urljoin(random_host, data["url"])
+        self.write(data)
         
 
     @property
@@ -205,7 +206,7 @@ def main():
 
     handlers = [
         (r"/stats", StatsHandler),
-        (r"/api/spawn", APISpawnHandler),
+        (r"/api/spawn/?", APISpawnHandler),
         (r'/.*', RerouteHandler),
     ]
     
