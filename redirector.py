@@ -93,12 +93,6 @@ def update_stats(stats):
             if host in stats:
                 stats[host] = data
 
-def fetch_api_spawn(host):
-    http_client = HTTPClient()
-    req = HTTPRequest(host + "/api/spawn/", method="POST", body="")
-    response = http_client.fetch(req)
-    return json.loads(response.body.decode('utf-8'))
-
 class HostsAPIHandler(RequestHandler):
     """API handler for adding or removing redirect targets"""
     def _get_host(self):
@@ -178,11 +172,14 @@ class RerouteHandler(RequestHandler):
         return self.settings['stats']
 
 class APISpawnHandler(RequestHandler):
+    @gen.coroutine
     def post(self):
         random_host = select_host(self.stats)
-        data = fetch_api_spawn(random_host)
-        data["url"] = urljoin(random_host, data["url"])
-        self.write(data)
+        http_client = AsyncHTTPClient()
+        request = HTTPRequest(random_host + "/api/spawn", method="POST", body="")
+        response = yield http_client.fetch(request)
+        response["url"] = urljoin(random_host, response["url"])
+        self.write(response)
         
 
     @property
