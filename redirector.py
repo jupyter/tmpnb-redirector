@@ -21,6 +21,7 @@ try:
     from urllib.parse import urlparse, urljoin
 except ImportError:
     from urlparse import urlparse
+    from urlparse import urljoin
 
 try:
     # py3
@@ -122,6 +123,9 @@ class HostsAPIHandler(RequestHandler):
         return self.settings['stats']
 
 class StatsHandler(RequestHandler):
+    def prepare(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+
     def get(self):
         """Returns some statistics/metadata about the tmpnb servers"""
         response = {
@@ -172,6 +176,9 @@ class RerouteHandler(RequestHandler):
         return self.settings['stats']
 
 class APISpawnHandler(RequestHandler):
+    def prepare(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+
     @gen.coroutine
     def post(self):
         random_host = select_host(self.stats)
@@ -212,6 +219,7 @@ def main():
 
     handlers = [
         (r"/stats", StatsHandler),
+        (r"/api/stats", StatsHandler),
         (r"/api/spawn/?", APISpawnHandler),
         (r'/.*', RerouteHandler),
     ]
