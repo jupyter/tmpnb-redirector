@@ -18,7 +18,7 @@ import json
 import random
 
 try:
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, urljoin
 except ImportError:
     from urlparse import urlparse
 
@@ -92,7 +92,6 @@ def update_stats(stats):
             app_log.debug("Got stats from %s: %s", host, data)
             if host in stats:
                 stats[host] = data
-
 
 class HostsAPIHandler(RequestHandler):
     """API handler for adding or removing redirect targets"""
@@ -172,6 +171,28 @@ class RerouteHandler(RequestHandler):
     def stats(self):
         return self.settings['stats']
 
+class APISpawnHandler(RequestHandler):
+    @gen.coroutine
+    def post(self):
+        random_host = select_host(self.stats)
+        http_client = AsyncHTTPClient()
+        request = HTTPRequest(random_host + "/api/spawn/", method="POST", body="")
+        try:
+            response = yield http_client.fetch(request)
+            data = json.loads(response.body.decode("utf-8"))
+            data["url"] = urljoin(random_host, data["url"])
+            self.write(data)
+        except Exception as e:
+            app_log.error("Failed to reach /api/spawn endpoint on %s: %s",
+                    random_host, e)
+            error_data = dict(error=e)
+            self.write(error_data)
+        
+
+    @property
+    def stats(self):
+        return self.settings['stats']
+
 def main():
     tornado.options.define('stats_period', default=60,
         help="Interval (s) for checking capacity of servers."
@@ -191,6 +212,7 @@ def main():
 
     handlers = [
         (r"/stats", StatsHandler),
+        (r"/api/spawn/?", APISpawnHandler),
         (r'/.*', RerouteHandler),
     ]
     
@@ -204,7 +226,7 @@ def main():
 
     settings = dict(
         stats=stats,
-        xsrf_cookies=True,
+        xsrf_cookies=False,
         debug=True,
         autoescape=None,
     )
