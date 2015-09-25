@@ -185,6 +185,8 @@ class APISpawnHandler(RequestHandler):
         except Exception as e:
             app_log.error("Failed to reach /api/spawn endpoint on %s: %s",
                     random_host, e)
+            error_data = dict(error=e)
+            self.write(error_data)
         
 
     @property
