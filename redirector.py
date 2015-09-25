@@ -36,7 +36,7 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 from tornado import ioloop
 
-from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient, HTTPClient
+from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
@@ -177,10 +177,14 @@ class APISpawnHandler(RequestHandler):
         random_host = select_host(self.stats)
         http_client = AsyncHTTPClient()
         request = HTTPRequest(random_host + "/api/spawn/", method="POST", body="")
-        response = yield http_client.fetch(request)
-        data = json.loads(response.body.decode("utf-8"))
-        data["url"] = urljoin(random_host, data["url"])
-        self.write(data)
+        try:
+            response = yield http_client.fetch(request)
+            data = json.loads(response.body.decode("utf-8"))
+            data["url"] = urljoin(random_host, data["url"])
+            self.write(data)
+        except Exception as e:
+            app_log.error("Failed to reach /api/spawn endpoint on %s: %s",
+                    random_host, e)
         
 
     @property
