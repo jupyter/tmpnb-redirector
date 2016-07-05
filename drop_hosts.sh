@@ -7,5 +7,5 @@ set -e
 REDIRECTOR_URL=${REDIRECTOR_URL:-"http://127.0.0.1:9001"}
 
 for host in $@; do
-  curl -q -X DELETE -d "{\"host\": \"$host\"}" $REDIRECTOR_URL/hosts
+  curl -s -X DELETE -d "{\"host\": \"$host\"}" $REDIRECTOR_URL/hosts
 done
