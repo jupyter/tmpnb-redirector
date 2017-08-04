@@ -39,7 +39,6 @@ from tornado import ioloop
 
 from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 
 def select_host(server_stats):
     """Select a random available host."""
