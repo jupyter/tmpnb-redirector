@@ -15,6 +15,7 @@ Remove them with DELETE
 """
 
 import json
+import os
 import random
 
 try:
@@ -39,6 +40,7 @@ from tornado import ioloop
 
 from tornado.httpclient import HTTPRequest, HTTPError, AsyncHTTPClient
 
+HOSTS_FILE = 'hosts.txt'
 
 def select_host(server_stats):
     """Select a random available host."""
@@ -65,6 +67,9 @@ def select_host(server_stats):
 
     return host
 
+def down_stats():
+    return {'available': 0, 'capacity': 0, 'down': True}
+
 @gen.coroutine
 def update_stats(stats):
     """Get updated stats for each host
@@ -87,11 +92,12 @@ def update_stats(stats):
         except Exception as e:
             app_log.error("Failed to get stats for %s: %s", host, e)
             if host in stats:
-                stats[host] = {'available': 0, 'capacity': 0, 'down': True}
+                stats[host] = down_stats()
         else:
             app_log.debug("Got stats from %s: %s", host, data)
             if host in stats:
                 stats[host] = data
+
 
 class HostsAPIHandler(RequestHandler):
     """API handler for adding or removing redirect targets"""
@@ -107,15 +113,22 @@ class HostsAPIHandler(RequestHandler):
         except Exception as e:
             app_log.error("Bad host %s", e)
             raise web.HTTPError(400)
-        
+
+    def _save_hosts(self):
+        with open(HOSTS_FILE, 'w') as f:
+            for host in sorted(self.stats.keys()):
+                f.write(host + '\n')
+
     def post(self):
         host = self._get_host()
         self.stats.setdefault(host, {'available': 0, 'capacity': 0, 'down': True})
         ioloop.IOLoop.current().add_callback(lambda : update_stats(self.stats))
+        self._save_hosts()
     
     def delete(self):
         host = self._get_host()
         self.stats.pop(host)
+        self._save_hosts()
     
     @property
     def stats(self):
@@ -237,20 +250,30 @@ def main():
         debug=True,
         autoescape=None,
     )
-    
+
+    # load from hosts file
+    if os.path.exists(HOSTS_FILE):
+        with open(HOSTS_FILE, 'r') as f:
+            for line in f:
+                host = line.strip()
+                if host:
+                    stats[host] = down_stats()
+
     stats_poll_ms = 1e3 * opts.stats_period
     app_log.info("Polling server stats every %i seconds", opts.stats_period)
     poller = ioloop.PeriodicCallback(lambda : update_stats(stats), stats_poll_ms)
     poller.start()
-    
+
     app_log.info("Listening on {}".format(opts.port))
     app_log.info("Hosts API on {}:{}".format(opts.api_ip, opts.api_port))
     app = tornado.web.Application(handlers, **settings)
     app.listen(opts.port)
-    
+
     api_app = tornado.web.Application(api_handlers, stats=stats)
     api_app.listen(opts.api_port, opts.api_ip)
-    
+
+    if stats:
+        ioloop.IOLoop.instance().add_callback(lambda : update_stats(stats))
     ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":

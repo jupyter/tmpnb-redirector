@@ -1,0 +1,4 @@
+hosts.txt
+*~
+__pycache__
+*.egg-info
